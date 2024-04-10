@@ -33,8 +33,8 @@ class Morphology(nn.Module):
         self.weight = nn.Parameter(torch.zeros(in_channels, kernel_size, kernel_size), requires_grad=True)
         # torch.nn.init.xavier_normal_(self.weight, gain=1.0)
         self.unfold = nn.Unfold(kernel_size, dilation=dilation, padding=p, stride=1)
-        self.activation = nn.Softmax(dim =-1)
-
+        self.activation = nn.ReLU(inplace=False)#nn.Softmax(dim =-1)
+        
     def forward(self, x):
         '''
         x: tensor of shape (B,C,H,W)
