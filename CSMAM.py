@@ -5,9 +5,6 @@ import torch.nn.functional as F
 from morpholayers import *
 
 
-
-
-
 class ChannelPool(nn.Module):
     def forward(self, x):
         return torch.cat( (torch.max(x,1)[0].unsqueeze(1), torch.mean(x,1).unsqueeze(1)), dim=1 )
@@ -39,25 +36,6 @@ class CBAM(nn.Module):
             x_out = self.SpatialGate(x_out)
         # print(torch.unique(x_out))
         return x_out
-
-
-
-
-
-# class SpatialGate(nn.Module):
-#     def __init__(self, n_chan):
-#         super(SpatialGate, self).__init__()
-#         kernel_size = 7
-#         self.grad = closing(n_chan, kernel_size, soft_max=True,dilation = 1)
-#         self.compress = ChannelPool()
-#         self.spatial = BasicConv(2, 1, kernel_size, stride=1, padding=(kernel_size-1) // 2, relu=False)
-#     def forward(self, x):
-#         x_compress = self.compress(x)
-#         x_out = self.spatial(x_compress)
-#         scale = F.sigmoid(x_out) # broadcasting
-#         return x * scale
-
-
 
 class MorphChannelGate(nn.Module):
     def __init__(self, gate_channels, reduction_ratio=16, pool_types=['avg', 'max']):
@@ -96,56 +74,6 @@ class MorphChannelGate(nn.Module):
 
         scale = F.sigmoid( channel_att_sum ).unsqueeze(2).unsqueeze(3).expand_as(x)
         return x_morph * scale
-
-
-
-
-# class DEChannelPool(nn.Module):
-#     def __init__(self, in_channel,kernel):
-#         super(DEChannelPool, self).__init__()
-#         n = in_channel
-
-#         self.ers1 = Erosion2d(in_channel, 3, soft_max=True,dilation = 1)
-#         self.ers2 = Erosion2d(in_channel, 5, soft_max=True,dilation = 1)
-#         self.ers3 = Erosion2d(in_channel, 7, soft_max=True,dilation = 1)
-
-#         self.dil1 = Dilation2d(in_channel, 3, soft_max=True,dilation = 1)
-#         self.dil2 = Dilation2d(in_channel, 5, soft_max=True,dilation = 1)
-#         self.dil3 = Dilation2d(in_channel, 7, soft_max=True,dilation = 1)
-
-#         self.bne1 = nn.BatchNorm2d(in_channel)
-#         self.bne2 = nn.BatchNorm2d(in_channel)
-#         self.bne3 = nn.BatchNorm2d(in_channel)
-
-#         self.bnd1 = nn.BatchNorm2d(in_channel)
-#         self.bnd2 = nn.BatchNorm2d(in_channel)
-#         self.bnd3 = nn.BatchNorm2d(in_channel)
-
-#         self.conve = nn.Conv2d(in_channel*3, 1, kernel_size=1, padding=0, dilation=1, bias=False)
-#         self.convd = nn.Conv2d(in_channel*3, 1, kernel_size=1, padding=0, dilation=1, bias=False)
-#         self.bne = nn.BatchNorm2d(1)
-#         self.bnd = nn.BatchNorm2d(1)
-#         self.relu = nn.ReLU(inplace=False)
-
-#     def forward(self, x):
-#         batch, _, h, w = x.size()
-#         xe1 = self.bne1(self.ers1(x))
-#         xe2 = self.bne2(self.ers2(x))
-#         xe3 = self.bne3(self.ers3(x))
-
-#         xd1 = self.bnd1(self.dil1(x))
-#         xd2 = self.bnd2(self.dil2(x))
-#         xd3 = self.bnd3(self.dil3(x))
-
-#         xe = torch.cat((xe1, xe2, xe3), 1)
-#         xe = self.relu(self.bne(self.conve(xe)))
-#         xd = torch.cat((xd1, xd2, xd3), 1)
-#         xd = self.relu(self.bnd(self.convd(xd)))
-
-#         x = torch.cat((xe, xd), 1)
-
-#         return x  
-
 
 def logsumexp_2d(tensor):
     tensor_flatten = tensor.view(tensor.size(0), tensor.size(1), -1)
