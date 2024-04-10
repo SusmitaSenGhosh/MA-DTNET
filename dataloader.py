@@ -13,40 +13,51 @@ from sklearn.model_selection import train_test_split
 import pickle
 from sklearn.model_selection import StratifiedKFold
 
+class DatasetHAM10000(torch.utils.data.Dataset):
+    def __init__(self, img_ids, cls_ids,img_dir, mask_dir, img_ext, mask_ext, num_classes,  transform=None):
+   
+        self.img_ids = img_ids
+        self.cls_ids = cls_ids
+        self.img_dir = img_dir
+        self.mask_dir = mask_dir
+        self.img_ext = img_ext
+        self.mask_ext = mask_ext
+        self.num_classes = num_classes
+        self.transform = transform
+
+        
+    def __len__(self):
+        return len(self.img_ids)
+
+    def __getitem__(self, idx):
+
+        
+        img_id = self.img_ids[idx]
+        cls_id = self.cls_ids[idx]
+        img = cv2.imread(os.path.join(self.img_dir, img_id + self.img_ext))
+        mask = []
+        # mask.append(cv2.imread(os.path.join(self.mask_dir,img_id +self.mask_ext), cv2.IMREAD_GRAYSCALE)[..., None])
+        mask.append(cv2.imread(os.path.join(self.mask_dir,img_id +'_segmentation' +self.mask_ext), cv2.IMREAD_GRAYSCALE)[..., None])
+        mask = np.dstack(mask)
+        # print(mask.shape)
+        
+        if self.transform is not None:
+            augmented = self.transform(image=img, mask=mask)
+            img = augmented['image']
+            mask = augmented['mask']
+        
+        img = img.astype('float32') / 255
+        img = img.transpose(2, 0, 1)
+        mask = mask.astype('float32') / 255
+        mask = mask.transpose(2, 0, 1)
+        
+        return img, mask, cls_id #, {'img_id': img_id}#torch.nn.functional.one_hot(torch.tensor(self.dict[img_id]), num_classes=3)#
+
+
 
 class DatasetBUSI(torch.utils.data.Dataset):
     def __init__(self, img_ids, img_dir, mask_dir, img_ext, mask_ext, num_classes, transform=None):
-        """
-        Args:
-            img_ids (list): Image ids.
-            img_dir: Image file directory.
-            mask_dir: Mask file directory.
-            img_ext (str): Image file extension.
-            mask_ext (str): Mask file extension.
-            num_classes (int): Number of classes.
-            transform (Compose, optional): Compose transforms of albumentations. Defaults to None.
-        
-        Note:
-            Make sure to put the files as the following structure:
-            <dataset name>
-            ├── images
-            |   ├── 0a7e06.jpg
-            │   ├── 0aab0a.jpg
-            │   ├── 0b1761.jpg
-            │   ├── ...
-            |
-            └── masks
-            |   ├── 0a7e06.png
-            |   ├── 0aab0a.png
-            |   ├── 0b1761.png
-            |   ├── ...
-            |
-            |   ├── 0a7e06.png
-            |   ├── 0aab0a.png
-            |   ├── 0b1761.png
-            |   ├── ...
-                ...
-        """
+
         self.img_ids = img_ids
         self.img_dir = img_dir
         self.mask_dir = mask_dir
@@ -90,78 +101,6 @@ class DatasetBUSI(torch.utils.data.Dataset):
 
 
 
-class DatasetGlaS(torch.utils.data.Dataset):
-    def __init__(self, img_ids, img_dir, mask_dir, img_ext, mask_ext, num_classes, dict_file, transform=None):
-        """
-        Args:
-            img_ids (list): Image ids.
-            img_dir: Image file directory.
-            mask_dir: Mask file directory.
-            img_ext (str): Image file extension.
-            mask_ext (str): Mask file extension.
-            num_classes (int): Number of classes.
-            transform (Compose, optional): Compose transforms of albumentations. Defaults to None.
-        
-        Note:
-            Make sure to put the files as the following structure:
-            <dataset name>
-            ├── images
-            |   ├── 0a7e06.jpg
-            │   ├── 0aab0a.jpg
-            │   ├── 0b1761.jpg
-            │   ├── ...
-            |
-            └── masks
-            |   ├── 0a7e06.png
-            |   ├── 0aab0a.png
-            |   ├── 0b1761.png
-            |   ├── ...
-            |
-            |   ├── 0a7e06.png
-            |   ├── 0aab0a.png
-            |   ├── 0b1761.png
-            |   ├── ...
-                ...
-        """
-        self.img_ids = img_ids
-        self.img_dir = img_dir
-        self.mask_dir = mask_dir
-        self.img_ext = img_ext
-        self.mask_ext = mask_ext
-        self.num_classes = num_classes
-        self.transform = transform
-
-        with open(dict_file, 'rb') as file:
-            mydict = pickle.load(file)
-        self.dict = mydict
-        
-    def __len__(self):
-        return len(self.img_ids)
-
-    def __getitem__(self, idx):
-
-        
-        img_id = self.img_ids[idx]
-        # print(img_id)
-        
-        img = cv2.imread(os.path.join(self.img_dir, img_id + self.img_ext))
-        mask = []
-        mask.append(cv2.imread(os.path.join(self.mask_dir,img_id +self.mask_ext), cv2.IMREAD_GRAYSCALE)[..., None])
-        # mask.append(cv2.imread(os.path.join(self.mask_dir,img_id +'_segmentation' +self.mask_ext), cv2.IMREAD_GRAYSCALE)[..., None])
-        mask = np.dstack(mask)
-        # print(mask.shape)
-
-        if self.transform is not None:
-            augmented = self.transform(image=img, mask=mask)
-            img = augmented['image']
-            mask = augmented['mask']
-        
-        img = img.astype('float32') / 255
-        img = img.transpose(2, 0, 1)
-        mask = mask.astype('float32') / 255
-        mask = mask.transpose(2, 0, 1)
-        
-        return img, mask, self.dict[img_id] #, {'img_id': img_id}
 
 
 
@@ -231,48 +170,109 @@ def load_data(dataset,num_classes,batchsize,input_h,input_w,img_ext,mask_ext,spl
             shuffle=False,
             drop_last=False)
 
-    if dataset == 'GlaS':
+    if dataset == 'HAM10000':
         # Data loading code
-        inputPath = '../inputs'
+        inputPath = '/home/mlrl/Susmita/Multitask/morpho-attention/inputs'
+        inputCSVPath = '/home/mlrl/Susmita/raw_data/segmentation/HAM10000/HAM10000_metadata.csv'
+        with open(inputCSVPath, newline='') as file: 
+            reader = csv.reader(file, delimiter = ' ') 
+            headings = next(reader)  
+            Output = [] 
+            mydict1 = {}
+            mydict2 = {}
 
-        img_ids = glob(os.path.join(inputPath, dataset, 'train','images', '*' + img_ext))
-        train_img_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_ids]
+            count = 0
+            for row in reader:
+                key = row[0].split(',')[0]
+                value = row[0].split(',')[1]
+                subs = row[0].split(',')[0]
+                mydict1.setdefault(key,[]).append(value)
+                value = row[0].split(',')[2]
+                if row[0].split(',')[2] == 'akiec':
+                    class_id = 0
+                elif row[0].split(',')[2] == 'bcc':
+                    class_id = 1
+                elif row[0].split(',')[2] == 'bkl':
+                    class_id = 2
+                elif row[0].split(',')[2] == 'df':
+                    class_id = 3
+                elif row[0].split(',')[2] == 'mel':
+                    class_id = 4
+                elif row[0].split(',')[2] == 'nv':
+                    class_id = 5
+                elif row[0].split(',')[2] == 'vasc':
+                    class_id = 6
+                mydict2.update({key:class_id})
 
+                # pause()
 
-        img_ids = glob(os.path.join(inputPath, dataset, 'test','images', '*' + img_ext))
-        test_img_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_ids]
+        # print(mydict2)
+        img_ids = []
+        cls_id = []
+        img_ids = [key for key in mydict2]
+        cls_id = [mydict2[key] for key in mydict2]
+        skf = StratifiedKFold(n_splits=5, random_state=0, shuffle=True)
+        # k = 2
+        train_sub_ids, val_sub_ids = list(skf.split(img_ids, cls_id))[k-1]
+        train_sub = [img_ids[i] for i in train_sub_ids]
+        val_sub = [img_ids[i] for i in val_sub_ids]
+        train_cls_id = [cls_id[i] for i in train_sub_ids]
+        val_cls_id = [cls_id[i] for i in val_sub_ids]
+
+        train_img_ids = []
+        train_cls_ids = []
+        for subs,cls_id in zip(train_sub,train_cls_id):
+            train_img_ids.extend(mydict1[subs])
+            train_cls_ids.extend(len(mydict1[subs])*[cls_id])
+
+        val_img_ids = []
+        val_cls_ids = []
+        for subs,cls_id in zip(val_sub,val_cls_id):
+            val_img_ids.extend(mydict1[subs])
+            val_cls_ids.extend(len(mydict1[subs])*[cls_id])
+
+        test_img_ids = val_img_ids 
+        test_cls_ids = val_cls_ids 
 
         train_transform = Compose([
             RandomRotate90(),
             Flip(),
-            Resize(input_h, input_w),
+            # Resize(input_h, input_w),
             Normalize(),
         ])
 
-        test_transform = Compose([
-            Resize(input_h, input_w),
+        val_transform = Compose([
+            # Resize(input_h, input_w),
             Normalize(),
         ])
 
-        train_dataset = DatasetGlaS(
+        train_dataset = DatasetHAM10000(
             img_ids=train_img_ids,
-            img_dir=os.path.join(inputPath, dataset, 'train','images'),
-            mask_dir=os.path.join(inputPath, dataset, 'train','masks'),
+            cls_ids=train_cls_ids,
+            img_dir=os.path.join(inputPath, dataset, 'images'),
+            mask_dir=os.path.join(inputPath, dataset, 'masks'),
             img_ext=img_ext,
             mask_ext=mask_ext,
-            dict_file = os.path.join(inputPath, dataset, 'mydict.pickle'),
             num_classes=num_classes,
             transform=train_transform)
-
-        test_dataset = DatasetGlaS(
-            img_ids=test_img_ids,
-            img_dir=os.path.join(inputPath, dataset, 'test','images'),
-            mask_dir=os.path.join(inputPath, dataset, 'test','masks'),
+        val_dataset = DatasetHAM10000(
+            img_ids=val_img_ids,
+            cls_ids=val_cls_ids,
+            img_dir=os.path.join(inputPath, dataset,'images'),
+            mask_dir=os.path.join(inputPath, dataset,'masks'),
             img_ext=img_ext,
             mask_ext=mask_ext,
-            dict_file = os.path.join(inputPath, dataset, 'mydict.pickle'),
             num_classes=num_classes,
-            transform=test_transform)
+            transform=val_transform)
+        test_dataset = DatasetHAM10000(
+            img_ids=test_img_ids,
+            cls_ids=test_cls_ids,
+            img_dir=os.path.join(inputPath, dataset,'images'),
+            mask_dir=os.path.join(inputPath, dataset,'masks'),
+            img_ext=img_ext,
+            mask_ext=mask_ext,
+            num_classes=num_classes,
+            transform=val_transform)
 
 
         train_loader = torch.utils.data.DataLoader(
@@ -280,133 +280,15 @@ def load_data(dataset,num_classes,batchsize,input_h,input_w,img_ext,mask_ext,spl
             batch_size=batchsize,
             shuffle=True,
             drop_last=True)
-
+        val_loader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size=batchsize,
+            shuffle=False,
+            drop_last=False)
         test_loader = torch.utils.data.DataLoader(
             test_dataset,
             batch_size=batchsize,
             shuffle=False,
             drop_last=False)
-
-    if dataset == 'GlaS_A':
-        # Data loading code
-        dataset = 'GlaS'
-        inputPath = '../inputs'
-        # num_classes = 3
-        img_ids = glob(os.path.join(inputPath, dataset, 'train','images', '*' + img_ext))
-        train_img_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_ids]
-
-
-        img_ids = glob(os.path.join(inputPath, dataset, 'test','images', '*' + img_ext))
-        test_img_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_ids]
-        test_img_ids = [idx for idx in test_img_ids if idx[0:5] == 'testA']
-
-        test_img_ids.sort()
-
-        train_transform = Compose([
-            RandomRotate90(),
-            Flip(),
-            Resize(input_h, input_w),
-            Normalize(),
-        ])
-
-        test_transform = Compose([
-            Resize(input_h, input_w),
-            Normalize(),
-        ])
-
-        train_dataset = DatasetGlaS(
-            img_ids=train_img_ids,
-            img_dir=os.path.join(inputPath, dataset, 'train','images'),
-            mask_dir=os.path.join(inputPath, dataset, 'train','masks'),
-            img_ext=img_ext,
-            mask_ext=mask_ext,
-            dict_file = os.path.join(inputPath, dataset, 'mydict.pickle'),
-            num_classes=num_classes,
-            transform=train_transform)
-
-        test_dataset = DatasetGlaS(
-            img_ids=test_img_ids,
-            img_dir=os.path.join(inputPath, dataset, 'test','images'),
-            mask_dir=os.path.join(inputPath, dataset, 'test','masks'),
-            img_ext=img_ext,
-            mask_ext=mask_ext,
-            dict_file = os.path.join(inputPath, dataset, 'mydict.pickle'),
-            num_classes=num_classes,
-            transform=test_transform)
-
-
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=batchsize,
-            shuffle=True,
-            drop_last=True)
-
-        test_loader = torch.utils.data.DataLoader(
-            test_dataset,
-            batch_size=batchsize,
-            shuffle=False,
-            drop_last=False)
-
-
-    if dataset == 'GlaS_B':
-        # Data loading code
-        dataset = 'GlaS'
-        inputPath = '../inputs'
-        # num_classes = 3
-        img_ids = glob(os.path.join(inputPath, dataset, 'train','images', '*' + img_ext))
-        train_img_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_ids]
-
-
-        img_ids = glob(os.path.join(inputPath, dataset, 'test','images', '*' + img_ext))
-        test_img_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_ids]
-        test_img_ids = [idx for idx in test_img_ids if idx[0:5] == 'testB']
-
-
-
-        train_transform = Compose([
-            RandomRotate90(),
-            Flip(),
-            Resize(input_h, input_w),
-            Normalize(),
-        ])
-
-        test_transform = Compose([
-            Resize(input_h, input_w),
-            Normalize(),
-        ])
-
-        train_dataset = DatasetGlaS(
-            img_ids=train_img_ids,
-            img_dir=os.path.join(inputPath, dataset, 'train','images'),
-            mask_dir=os.path.join(inputPath, dataset, 'train','masks'),
-            img_ext=img_ext,
-            mask_ext=mask_ext,
-            dict_file = os.path.join(inputPath, dataset, 'mydict.pickle'),
-            num_classes=num_classes,
-            transform=train_transform)
-
-        test_dataset = DatasetGlaS(
-            img_ids=test_img_ids,
-            img_dir=os.path.join(inputPath, dataset, 'test','images'),
-            mask_dir=os.path.join(inputPath, dataset, 'test','masks'),
-            img_ext=img_ext,
-            mask_ext=mask_ext,
-            dict_file = os.path.join(inputPath, dataset, 'mydict.pickle'),
-            num_classes=num_classes,
-            transform=test_transform)
-
-
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=batchsize,
-            shuffle=True,
-            drop_last=True)
-
-        test_loader = torch.utils.data.DataLoader(
-            test_dataset,
-            batch_size=batchsize,
-            shuffle=False,
-            drop_last=False)
-
 
     return train_loader, test_loader
