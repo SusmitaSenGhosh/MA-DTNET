@@ -40,11 +40,6 @@ def get_classifier(classifier_name, n_class):
         return resnet_classifier(n_class)
     elif classifier_name == 'resnet_classifier_CA':
         return resnet_classifier_CA(n_class)
-    elif classifier_name == 'efficientnet_classifier':
-        return efficientnet_classifier(n_class)
-    elif classifier_name == 'efficientnet_classifier_CA':
-        return efficientnet_classifier_CA(n_class)
-
         
 
 
