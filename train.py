@@ -20,15 +20,15 @@ import torch.nn.functional as F
 
 # construct the argument parser
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', type=str, default='BUSI',
+parser.add_argument('--dataset', type=str, default='HAM10000',
     help='dataset name')
 parser.add_argument('--split_seed', type=int, default=18,
     help='split seed')
-parser.add_argument('--encoder_name', type=str, default='unet_encoder_effb4', 
-    help='encoder name')  ### 'unet_encoder_effb4' or 'unet_encoder_resnet18' or 'unet_encoder_resnet34'
-parser.add_argument('--segHead_name', type=str, default='unet_decoder_CSMAM',
+parser.add_argument('--encoder_name', type=str, default='smp_unet_encoder34', 
+    help='encoder name') 
+parser.add_argument('--segHead_name', type=str, default='smp_unet_decoder_CSMAM',
     help='decoder name') ## 'unet_decoder_CSMAM'
-parser.add_argument('--classHead_name', type=str, default='efficientnet_classifier_CA',
+parser.add_argument('--classHead_name', type=str, default='resnet_classifier_CA',
     help='classifier name')
 parser.add_argument('--mode', type=str, default='multitask',
     help='mode of task')
