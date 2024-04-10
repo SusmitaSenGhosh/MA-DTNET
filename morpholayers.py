@@ -6,7 +6,7 @@ import math
 
 class Morphology(nn.Module):
     '''
-    Base class for morpholigical operators 
+    Base class for morphological operators 
     For now, only supports stride=1, dilation=1, kernel_size H==W, and padding='same'.
     '''
     def __init__(self, in_channels, kernel_size=5, soft_max=True, dilation = 1,type=None):
