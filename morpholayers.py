@@ -17,21 +17,13 @@ class Morphology(nn.Module):
         type: str, dilation2d or erosion2d or gradient2d.
         '''
         super(Morphology, self).__init__()
-        # if kernel_size%2 == 0:
-        #     p = int(((kernel_size-1)*(dilation-1)+kernel_size)/2)
-        #     # p1 = dilation*(kernel_size-1)//2
-        #     # print(kernel_size,p,p1)
-        # else:
         p = int(((kernel_size-1)*(dilation-1)+kernel_size)/2)
-            # p1 = dilation*(kernel_size-1)//2
-            # print(kernel_size,p,p1)
         self.in_channels = in_channels
         self.kernel_size = kernel_size
         self.soft_max = soft_max
         self.type = type
         self.dilation = dilation
         self.weight = nn.Parameter(torch.zeros(in_channels, kernel_size, kernel_size), requires_grad=True)
-        # torch.nn.init.xavier_normal_(self.weight, gain=1.0)
         self.unfold = nn.Unfold(kernel_size, dilation=dilation, padding=p, stride=1)
         self.activation = nn.ReLU(inplace=False)#nn.Softmax(dim =-1)
         
