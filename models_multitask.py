@@ -103,3 +103,4 @@ class resnet_classifier_CA(nn.Module):
         x = self.fc3(x)
         return x
 
+
